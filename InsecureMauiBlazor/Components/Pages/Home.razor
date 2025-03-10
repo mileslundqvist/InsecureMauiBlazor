@@ -1,5 +1,79 @@
 ﻿@page "/"
 
-<h1>Hello, world!</h1>
+<PageTitle>Vulnerable MAUI Blazor Hybrid App</PageTitle>
 
-Welcome to your new app.
+<h1>Vulnerable MAUI Blazor Hybrid App</h1>
+
+<p>
+    This application is intentionally vulnerable for security testing purposes.
+    It demonstrates various security vulnerabilities in .NET MAUI Blazor Hybrid applications.
+</p>
+
+<div class="alert alert-warning">
+    <strong>Warning:</strong> This app contains intentional security vulnerabilities.
+    It should only be used in isolated testing environments.
+</div>
+
+<h2>Vulnerability Categories</h2>
+
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Data Storage</h5>
+                <p class="card-text">Insecure storage of sensitive data in various storage mechanisms.</p>
+                <a href="storage-vulnerabilities" class="btn btn-primary">Explore</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Cryptography</h5>
+                <p class="card-text">Weak cryptographic implementations and key management.</p>
+                <a href="crypto-vulnerabilities" class="btn btn-primary">Explore</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Authentication</h5>
+                <p class="card-text">Authentication bypass, weak credential storage, and session management.</p>
+                <a href="auth-vulnerabilities" class="btn btn-primary">Explore</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Network Security</h5>
+                <p class="card-text">Insecure network communications and API calls.</p>
+                <a href="network-vulnerabilities" class="btn btn-primary">Explore</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Platform Interaction</h5>
+                <p class="card-text">Insecure interaction with platform-specific features.</p>
+                <a href="platform-vulnerabilities" class="btn btn-primary">Explore</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">JS-Native Interop</h5>
+                <p class="card-text">Vulnerabilities in the communication between JavaScript and native code.</p>
+                <a href="interop-vulnerabilities" class="btn btn-primary">Explore</a>
+            </div>
+        </div>
+    </div>
+</div>

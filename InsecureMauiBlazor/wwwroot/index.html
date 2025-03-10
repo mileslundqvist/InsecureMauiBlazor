@@ -9,6 +9,28 @@
     <link rel="stylesheet" href="css/app.css" />
     <link rel="stylesheet" href="InsecureMauiBlazor.styles.css" />
     <link rel="icon" href="data:,">
+
+    <script>
+        // VULNERABILITY: Global storage of sensitive data
+        window.sensitiveData = {};
+
+        // VULNERABILITY: Global access to native methods
+        window.incokeNativeMethod = function (methodName, ...args) {
+            return DotNet.incokeMethodAsync('InsecureMauiBlazor', methodName, ...args);
+        };
+
+        // VULNERABILITY: Storing sensitive data in localStorage
+        window.storeData = function (key, value) {
+            localStorage.setItem(key, value);
+            console.log("Stored data: " + key);
+        };
+
+        // VULNERABILITY: Executing JavaScript from strings
+        window.evalCode = function (code) {
+            console.log("Evaluating code: " + code);
+            return eval(code);
+        };
+    </script>
 </head>
 
 <body>
