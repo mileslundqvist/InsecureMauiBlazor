@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using InsecureMauiBlazor.Services;
+using Microsoft.Extensions.Logging;
 
 namespace InsecureMauiBlazor
 {
@@ -20,6 +21,11 @@ namespace InsecureMauiBlazor
     		builder.Services.AddBlazorWebViewDeveloperTools();
     		builder.Logging.AddDebug();
 #endif
+            builder.Services.AddSingleton<IDataStorageService, InsecureDataStorageService>();
+            builder.Services.AddSingleton<INetworkService, InsecureNetworkService>();
+            builder.Services.AddSingleton<ICryptoService, InsecureCryptoService>();
+            builder.Services.AddSingleton<IAuthService, InsecureAuthService>();
+            builder.Services.AddSingleton<NativeFeatures>();
 
             return builder.Build();
         }
