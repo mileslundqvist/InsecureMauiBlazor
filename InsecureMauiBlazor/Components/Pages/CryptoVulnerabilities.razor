@@ -1,0 +1,338 @@
+﻿@page "/crypto-vulnerabilities"
+@inject ICryptoService CryptoService
+@inject IDataStorageService DataStorageService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Cryptographic Vulnerabilities</PageTitle>
+
+<h1>Cryptographic Vulnerabilities</h1>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Weak Encryption Demo</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-group mb-3">
+                    <label for="plaintext">Plaintext</label>
+                    <input type="text" class="form-control" id="plaintext" @bind="plaintext" />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Encryption Algorithm</label>
+                    <select class="form-select" @bind="selectedAlgorithm">
+                        <option value="DES">DES (Weak)</option>
+                        <option value="3DES">Triple DES (Weak)</option>
+                        <option value="AES">AES (Strong, but with static key)</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-primary" @onclick="EncryptText">Encrypt</button>
+                <button class="btn btn-secondary" @onclick="DecryptText">Decrypt</button>
+
+                <div class="mt-3">
+                    <label for="ciphertext">Ciphertext</label>
+                    <textarea class="form-control" id="ciphertext" rows="3" @bind="ciphertext"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Weak Hashing Demo</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-group mb-3">
+                    <label for="hashInput">Input Text</label>
+                    <input type="text" class="form-control" id="hashInput" @bind="hashInput" />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Hash Algorithm</label>
+                    <select class="form-select" @bind="selectedHashAlgorithm">
+                        <option value="MD5">MD5 (Vulnerable)</option>
+                        <option value="SHA1">SHA1 (Vulnerable)</option>
+                        <option value="SHA256">SHA256 (Better)</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-primary" @onclick="ComputeHash">Compute Hash</button>
+
+                <div class="mt-3">
+                    <label for="hashOutput">Hash Output</label>
+                    <input type="text" class="form-control" id="hashOutput" readonly value="@hashOutput" />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Hardcoded Key Vulnerability</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <strong>Vulnerability:</strong> This application uses hardcoded encryption keys stored in the source code.
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="sensitiveData">Sensitive Data</label>
+                    <input type="text" class="form-control" id="sensitiveData" @bind="sensitiveData" />
+                </div>
+
+                <button class="btn btn-primary" @onclick="StoreWithHardcodedKey">Encrypt and Store</button>
+                <button class="btn btn-secondary" @onclick="RetrieveWithHardcodedKey">Retrieve and Decrypt</button>
+
+                <div class="mt-3">
+                    <pre class="border p-2 bg-light"><code>// Hardcoded key in source code
+private static readonly byte[] HardcodedKey = 
+    Encoding.UTF8.GetBytes("ThisIsAWeakHardcodedKey123");
+
+// Hardcoded IV (Initialization Vector)
+private static readonly byte[] HardcodedIV = 
+    Encoding.UTF8.GetBytes("InitVectorFixed!");</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Key Derivation Vulnerability</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <strong>Vulnerability:</strong> Weak password-based key derivation without salt or proper iteration count.
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="password">Password</label>
+                    <input type="password" class="form-control" id="password" @bind="password" />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="passwordProtectedData">Data to Encrypt</label>
+                    <input type="text" class="form-control" id="passwordProtectedData" @bind="passwordProtectedData" />
+                </div>
+
+                <button class="btn btn-primary" @onclick="EncryptWithPassword">Encrypt with Password</button>
+                <button class="btn btn-secondary" @onclick="DecryptWithPassword">Decrypt with Password</button>
+
+                <div class="mt-3">
+                    <label for="passwordResult">Result</label>
+                    <input type="text" class="form-control" id="passwordResult" readonly value="@passwordResult" />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Results</h5>
+            </div>
+            <div class="card-body">
+                <pre>@resultMessage</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // Encryption demo
+    private string plaintext = "This is sensitive data";
+    private string ciphertext = "";
+    private string selectedAlgorithm = "DES";
+
+    // Hashing demo
+    private string hashInput = "password123";
+    private string hashOutput = "";
+    private string selectedHashAlgorithm = "MD5";
+
+    // Hardcoded key demo
+    private string sensitiveData = "Credit Card: 4111-1111-1111-1111";
+
+    // Password-based encryption demo
+    private string password = "simple";
+    private string passwordProtectedData = "Top secret information";
+    private string passwordResult = "";
+
+    // Results
+    private string resultMessage = "";
+
+    private async Task EncryptText()
+    {
+        try
+        {
+            // Vulnerable: Using weak encryption algorithms and static keys
+            ciphertext = CryptoService.Encrypt(plaintext);
+            resultMessage = $"Encrypted using {selectedAlgorithm} with static key and IV";
+
+            // Vulnerable: Log encryption operations
+            Console.WriteLine($"Encrypting data: '{plaintext}' using {selectedAlgorithm}");
+            Console.WriteLine($"Ciphertext: {ciphertext}");
+
+            // Vulnerable: Store algorithm used in local storage
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem",
+                "last_crypto_algorithm", selectedAlgorithm);
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Encryption error: {ex.Message}";
+        }
+    }
+
+    private async Task DecryptText()
+    {
+        try
+        {
+            // Vulnerable: Using weak decryption algorithms
+            plaintext = CryptoService.Decrypt(ciphertext);
+            resultMessage = $"Decrypted using {selectedAlgorithm} with static key and IV";
+
+            // Vulnerable: Log decryption operations
+            Console.WriteLine($"Decrypted data: '{plaintext}' using {selectedAlgorithm}");
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Decryption error: {ex.Message}";
+        }
+    }
+
+    private async Task ComputeHash()
+    {
+        try
+        {
+            // Vulnerable: Using weak hash algorithms
+            hashOutput = CryptoService.Hash(hashInput);
+            resultMessage = $"Computed hash using {selectedHashAlgorithm}";
+
+            // Vulnerable: Log hashing operations
+            Console.WriteLine($"Hashed data: '{hashInput}' using {selectedHashAlgorithm}");
+            Console.WriteLine($"Hash output: {hashOutput}");
+
+            // Vulnerable: Store hash in insecure storage
+            DataStorageService.SaveInsecurely($"{selectedHashAlgorithm}_hash", hashOutput);
+            DataStorageService.SaveInsecurely($"{selectedHashAlgorithm}_input", hashInput);
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Hashing error: {ex.Message}";
+        }
+    }
+
+    private async Task StoreWithHardcodedKey()
+    {
+        try
+        {
+            // Vulnerable: Encrypt with hardcoded key and store
+            string encrypted = CryptoService.Encrypt(sensitiveData);
+            DataStorageService.SaveInsecurely("hardcoded_key_data", encrypted);
+
+            resultMessage = "Data encrypted with hardcoded key and stored";
+
+            // Vulnerable: Log sensitive operation
+            Console.WriteLine($"Stored encrypted data using hardcoded key: {encrypted}");
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task RetrieveWithHardcodedKey()
+    {
+        try
+        {
+            // Vulnerable: Retrieve and decrypt with hardcoded key
+            string encrypted = DataStorageService.GetInsecurely("hardcoded_key_data");
+            if (!string.IsNullOrEmpty(encrypted))
+            {
+                sensitiveData = CryptoService.Decrypt(encrypted);
+                resultMessage = "Data retrieved and decrypted with hardcoded key";
+            }
+            else
+            {
+                resultMessage = "No stored data found";
+            }
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task EncryptWithPassword()
+    {
+        try
+        {
+            // Vulnerable: Weak password-based encryption
+            // In a real implementation, this would derive a key from the password in an insecure way
+
+            // Simulate weak key derivation (MD5 of password)
+            string weakKey = CryptoService.Hash(password);
+
+            // Store the encrypted data with the weak key
+            DataStorageService.SaveInsecurely("password_protected_data",
+                $"{weakKey}:{CryptoService.Encrypt(passwordProtectedData)}");
+
+            resultMessage = "Data encrypted with password-derived key (weak derivation)";
+            passwordResult = "Encrypted and stored";
+
+            // Vulnerable: Log sensitive operation
+            Console.WriteLine($"Used password '{password}' to derive key '{weakKey}'");
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task DecryptWithPassword()
+    {
+        try
+        {
+            // Vulnerable: Weak password-based decryption
+            string storedData = DataStorageService.GetInsecurely("password_protected_data");
+
+            if (string.IsNullOrEmpty(storedData) || !storedData.Contains(":"))
+            {
+                resultMessage = "No stored data found or invalid format";
+                return;
+            }
+
+            // Split the stored data to get the key hash and encrypted data
+            string[] parts = storedData.Split(':');
+            string storedKeyHash = parts[0];
+            string encryptedData = parts[1];
+
+            // Compute key hash from current password
+            string currentKeyHash = CryptoService.Hash(password);
+
+            // Check if password matches
+            if (storedKeyHash != currentKeyHash)
+            {
+                resultMessage = "Incorrect password";
+                passwordResult = "Decryption failed - wrong password";
+                return;
+            }
+
+            // Decrypt the data
+            passwordResult = CryptoService.Decrypt(encryptedData);
+            resultMessage = "Data decrypted with password-derived key";
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+}

@@ -1,0 +1,359 @@
+﻿@page "/auth-vulnerabilities"
+@inject IAuthService AuthService
+@inject IDataStorageService DataStorageService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Authentication Vulnerabilities</PageTitle>
+
+<h1>Authentication Vulnerabilities</h1>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Insecure Login</h5>
+                <span class="badge bg-danger">VULNERABLE</span>
+            </div>
+            <div class="card-body">
+                <div class="form-group mb-3">
+                    <label for="username">Username</label>
+                    <input type="text" class="form-control" id="username" @bind="username" />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="password">Password</label>
+                    <input type="password" class="form-control" id="password" @bind="password" />
+                </div>
+
+                <button class="btn btn-primary" @onclick="Login">Login</button>
+
+                <div class="mt-3 @(isLoggedIn ? "text-success" : "text-danger")">
+                    @(isLoggedIn ? "Logged in successfully!" : "Not logged in")
+                </div>
+
+                <div class="alert alert-warning mt-3">
+                    <strong>Vulnerable Login:</strong> Try these credentials
+                    <ul>
+                        <li>admin / admin123</li>
+                        <li>user / password</li>
+                        <li>ADMIN / admin123 (case insensitive)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Insecure Token Handling</h5>
+                <span class="badge bg-danger">VULNERABLE</span>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <strong>Vulnerabilities:</strong>
+                    <ul>
+                        <li>Tokens stored in plaintext</li>
+                        <li>Predictable token format</li>
+                        <li>No token expiration</li>
+                        <li>Weak token validation</li>
+                    </ul>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="authToken">Authentication Token</label>
+                    <input type="text" class="form-control" id="authToken" @bind="authToken" />
+                </div>
+
+                <button class="btn btn-primary" @onclick="ValidateToken">Validate Token</button>
+                <button class="btn btn-secondary" @onclick="GetStoredToken">Get Stored Token</button>
+
+                <div class="mt-3 @(isTokenValid ? "text-success" : "text-danger")">
+                    @(isTokenValid ? "Token is valid!" : "Token is invalid or not set")
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Weak Password Policies</h5>
+                <span class="badge bg-danger">VULNERABLE</span>
+            </div>
+            <div class="card-body">
+                <div class="form-group mb-3">
+                    <label for="newUsername">New Username</label>
+                    <input type="text" class="form-control" id="newUsername" @bind="newUsername" />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="newPassword">New Password</label>
+                    <input type="password" class="form-control" id="newPassword" @bind="newPassword" />
+                </div>
+
+                <button class="btn btn-primary" @onclick="RegisterUser">Register</button>
+
+                <div class="alert alert-warning mt-3">
+                    <strong>Weak Password Policy:</strong> This app accepts any password, including:
+                    <ul>
+                        <li>Empty passwords</li>
+                        <li>Short passwords (e.g. "a")</li>
+                        <li>Common passwords (e.g. "password")</li>
+                        <li>Passwords matching the username</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Password Recovery Vulnerability</h5>
+                <span class="badge bg-danger">VULNERABLE</span>
+            </div>
+            <div class="card-body">
+                <div class="form-group mb-3">
+                    <label for="recoveryUsername">Username</label>
+                    <input type="text" class="form-control" id="recoveryUsername" @bind="recoveryUsername" />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Security Question</label>
+                    <select class="form-select" @bind="selectedQuestion">
+                        <option value="first_pet">What was your first pet's name?</option>
+                        <option value="mother_maiden">What is your mother's maiden name?</option>
+                        <option value="birth_city">In which city were you born?</option>
+                    </select>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="answer">Answer</label>
+                    <input type="text" class="form-control" id="answer" @bind="securityAnswer" />
+                </div>
+
+                <button class="btn btn-primary" @onclick="RecoverPassword">Recover Password</button>
+
+                <div class="alert alert-danger mt-3">
+                    <strong>Vulnerabilities:</strong>
+                    <ul>
+                        <li>Weak security questions</li>
+                        <li>No rate limiting on attempts</li>
+                        <li>Username enumeration (different error for valid/invalid users)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Results</h5>
+            </div>
+            <div class="card-body">
+                <pre>@resultMessage</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // Login
+    private string username = "";
+    private string password = "";
+    private bool isLoggedIn = false;
+
+    // Token
+    private string authToken = "";
+    private bool isTokenValid = false;
+
+    // Registration
+    private string newUsername = "";
+    private string newPassword = "";
+
+    // Password recovery
+    private string recoveryUsername = "";
+    private string selectedQuestion = "first_pet";
+    private string securityAnswer = "";
+
+    // Results
+    private string resultMessage = "";
+
+    // Hardcoded security answers for demo
+    private readonly Dictionary<string, Dictionary<string, string>> securityAnswers = new Dictionary<string, Dictionary<string, string>>
+    {
+        { "admin", new Dictionary<string, string> {
+            { "first_pet", "fluffy" },
+            { "mother_maiden", "smith" },
+            { "birth_city", "chicago" }
+        }},
+        { "user", new Dictionary<string, string> {
+            { "first_pet", "spot" },
+            { "mother_maiden", "johnson" },
+            { "birth_city", "new york" }
+        }}
+    };
+
+    private async Task Login()
+    {
+        try
+        {
+            // VULNERABILITY: Weak authentication logic
+            isLoggedIn = AuthService.Login(username, password);
+
+            if (isLoggedIn)
+            {
+                // VULNERABILITY: Generate and store insecure token
+                string token = AuthService.GetAuthToken();
+                resultMessage = $"Login successful. Token: {token}";
+
+                // VULNERABILITY: Store token in localStorage
+                await JSRuntime.InvokeVoidAsync("localStorage.setItem", "auth_token", token);
+
+                // Set the token for display
+                authToken = token;
+                isTokenValid = true;
+            }
+            else
+            {
+                resultMessage = "Login failed. Invalid username or password.";
+                isTokenValid = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task ValidateToken()
+    {
+        try
+        {
+            // VULNERABILITY: Weak token validation
+            isTokenValid = AuthService.ValidateToken(authToken);
+
+            if (isTokenValid)
+            {
+                resultMessage = "Token is valid.";
+
+                // VULNERABILITY: Save the valid token in preferences
+                AuthService.SaveAuthToken(authToken);
+            }
+            else
+            {
+                resultMessage = "Token is invalid.";
+            }
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task GetStoredToken()
+    {
+        try
+        {
+            // Try to get token from localStorage first
+            authToken = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "auth_token");
+
+            // If not found in localStorage, try to get from native storage
+            if (string.IsNullOrEmpty(authToken))
+            {
+                authToken = AuthService.GetAuthToken();
+
+                if (!string.IsNullOrEmpty(authToken))
+                {
+                    // VULNERABILITY: Store token in localStorage if found in native storage
+                    await JSRuntime.InvokeVoidAsync("localStorage.setItem", "auth_token", authToken);
+                }
+            }
+
+            if (string.IsNullOrEmpty(authToken))
+            {
+                resultMessage = "No stored token found.";
+                isTokenValid = false;
+            }
+            else
+            {
+                resultMessage = $"Retrieved token: {authToken}";
+                isTokenValid = AuthService.ValidateToken(authToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task RegisterUser()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(newUsername))
+            {
+                resultMessage = "Username cannot be empty.";
+                return;
+            }
+
+            // VULNERABILITY: No password strength validation
+            // VULNERABILITY: Store user credentials insecurely
+            DataStorageService.SaveInsecurely($"user_{newUsername}", newPassword);
+
+            // VULNERABILITY: Log registration
+            Console.WriteLine($"New user registered: {newUsername} with password: {newPassword}");
+
+            resultMessage = $"User {newUsername} registered successfully with password: {newPassword}";
+
+            // VULNERABILITY: Store in JavaScript localStorage
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem",
+                $"user_{newUsername}", newPassword);
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task RecoverPassword()
+    {
+        try
+        {
+            // VULNERABILITY: Username enumeration
+            if (string.IsNullOrEmpty(recoveryUsername) ||
+                (!recoveryUsername.Equals("admin", StringComparison.OrdinalIgnoreCase) &&
+                 !recoveryUsername.Equals("user", StringComparison.OrdinalIgnoreCase)))
+            {
+                resultMessage = $"User {recoveryUsername} not found.";
+                return;
+            }
+
+            string lowerUsername = recoveryUsername.ToLower();
+
+            // VULNERABILITY: Case sensitive security answers
+            if (securityAnswers.ContainsKey(lowerUsername) &&
+                securityAnswers[lowerUsername].ContainsKey(selectedQuestion) &&
+                securityAnswers[lowerUsername][selectedQuestion].Equals(securityAnswer))
+            {
+                // VULNERABILITY: Return password in plaintext
+                string password = lowerUsername == "admin" ? "admin123" : "password";
+                resultMessage = $"Password recovery successful. Your password is: {password}";
+            }
+            else
+            {
+                resultMessage = "Incorrect security answer.";
+            }
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+}

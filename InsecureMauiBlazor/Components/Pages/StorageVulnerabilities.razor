@@ -1,0 +1,149 @@
+﻿@page "/storage-vulnerabilities"
+@inject IJSRuntime JSRuntime
+@inject IDataStorageService DataStorageService
+
+<PageTitle>Storage Vulnerabilities</PageTitle>
+
+<h1>Insecure Data Storage</h1>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>User Credentials Storage</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-group mb-3">
+                    <label for="username">Username</label>
+                    <input type="text" class="form-control" id="username" @bind="username" />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="password">Password</label>
+                    <input type="password" class="form-control" id="password" @bind="password" />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="creditCard">Credit Card</label>
+                    <input type="text" class="form-control" id="creditCard" @bind="creditCard" />
+                </div>
+
+                <button class="btn btn-primary" @onclick="SaveCredentials">Save Credentials</button>
+                <button class="btn btn-secondary" @onclick="LoadCredentials">Load Credentials</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Browser Storage (WebView)</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-group mb-3">
+                    <label for="apiKey">API Key</label>
+                    <input type="text" class="form-control" id="apiKey" @bind="apiKey" />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="authToken">Authentication Token</label>
+                    <input type="text" class="form-control" id="authToken" @bind="authToken" />
+                </div>
+
+                <button class="btn btn-primary" @onclick="SaveToBrowser">Save to Browser Storage</button>
+                <button class="btn btn-secondary" @onclick="LoadFromBrowser">Load from Browser Storage</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Results</h5>
+            </div>
+            <div class="card-body">
+                <pre>@resultMessage</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string username = "";
+    private string password = "";
+    private string creditCard = "";
+    private string apiKey = "";
+    private string authToken = "";
+    private string resultMessage = "";
+
+    private async Task SaveCredentials()
+    {
+        try
+        {
+            // VULNERABILITY: Insecure data storage
+            DataStorageService.SaveInsecurely("username", username);
+            DataStorageService.SaveInsecurely("password", password);
+            DataStorageService.SaveInsecurely("creditCard", creditCard);
+
+            // VULNERABILITY: Logging sensitive data
+            Console.WriteLine($"User credentials saved: {username}:{password}");
+            resultMessage = "Credentials saved insecurely";
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private void LoadCredentials()
+    {
+        try
+        {
+            username = DataStorageService.GetInsecurely("username");
+            password = DataStorageService.GetInsecurely("password");
+            creditCard = DataStorageService.GetInsecurely("creditCard");
+            resultMessage = "Credentials loaded";
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task SaveToBrowser()
+    {
+        try
+        {
+            // VULNERABILITY: Store sensitive data in localStorage
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "apiKey", apiKey);
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", authToken);
+
+            // VULNERABILITY: Also expose to global JavaScript
+            await JSRuntime.InvokeVoidAsync("eval", $"window.sensitiveData.apiKey = '{apiKey}';");
+            await JSRuntime.InvokeVoidAsync("eval", $"window.sensitiveData.authToken = '{authToken}';");
+
+            resultMessage = "API credentials saved insecurely to localStorage and global JavaScript variables";
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task LoadFromBrowser()
+    {
+        try
+        {
+            // VULNERABILITY: Load from insecure storage
+            apiKey = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "apiKey");
+            authToken = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "authToken");
+            resultMessage = "API credentials loaded from localStorage";
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+}

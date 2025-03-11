@@ -1,0 +1,357 @@
+﻿@page "/platform-vulnerabilities"
+@inject IJSRuntime JSRuntime
+@inject NativeFeatures NativeFeatures
+
+<PageTitle>Platform Interaction Vulnerabilities</PageTitle>
+
+<h1>Platform Interaction Vulnerabilities</h1>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Insecure File Operations</h5>
+                <span class="badge bg-danger">VULNERABLE</span>
+            </div>
+            <div class="card-body">
+                <div class="form-group mb-3">
+                    <label for="filePath">File Path</label>
+                    <input type="text" class="form-control" id="filePath" @bind="filePath"
+                           placeholder="/data/data/com.example.app/files/config.txt" />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="fileContent">File Content</label>
+                    <textarea class="form-control" id="fileContent" rows="3" @bind="fileContent"></textarea>
+                </div>
+
+                <div class="btn-group mb-3">
+                    <button class="btn btn-primary" @onclick="ReadFile">Read File</button>
+                    <button class="btn btn-warning" @onclick="WriteFile">Write File</button>
+                </div>
+
+                <div class="alert alert-danger">
+                    <strong>Vulnerabilities:</strong>
+                    <ul>
+                        <li>No path traversal validation</li>
+                        <li>Access to sensitive files</li>
+                        <li>No permission checks</li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-info mt-3">
+                    <strong>Try these paths:</strong>
+                    <ul>
+                        <li>/data/user/0/[package_name]/shared_prefs/[app_name].xml</li>
+                        <li>../../../etc/hosts</li>
+                        <li>/sdcard/Download/test.txt</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Insecure Device Information Access</h5>
+                <span class="badge bg-danger">VULNERABLE</span>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-primary mb-3" @onclick="GetDeviceInfo">Get Device Information</button>
+
+                <div class="form-group mb-3">
+                    <label>Device Information</label>
+                    <pre class="border p-2 bg-light"><code>@deviceInfo</code></pre>
+                </div>
+
+                <div class="alert alert-danger">
+                    <strong>Vulnerabilities:</strong>
+                    <ul>
+                        <li>Collecting sensitive device identifiers</li>
+                        <li>No permission checks</li>
+                        <li>Information stored insecurely</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Command Execution</h5>
+                <span class="badge bg-danger">VULNERABLE</span>
+            </div>
+            <div class="card-body">
+                <div class="form-group mb-3">
+                    <label for="command">Command</label>
+                    <input type="text" class="form-control" id="command" @bind="command"
+                           placeholder="get_files /data/data" />
+                </div>
+
+                <button class="btn btn-primary" @onclick="ExecuteCommand">Execute Command</button>
+
+                <div class="alert alert-danger mt-3">
+                    <strong>Vulnerabilities:</strong>
+                    <ul>
+                        <li>Command injection possible</li>
+                        <li>No input sanitization</li>
+                        <li>Excessive privileges</li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-info">
+                    <strong>Available commands:</strong>
+                    <ul>
+                        <li>get_files [directory]</li>
+                        <li>read_file [file_path]</li>
+                        <li>device_info</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Insecure WebView Configuration</h5>
+                <span class="badge bg-danger">VULNERABLE</span>
+            </div>
+            <div class="card-body">
+                <div class="form-group mb-3">
+                    <label for="webViewUrl">URL to Load</label>
+                    <input type="text" class="form-control" id="webViewUrl" @bind="webViewUrl"
+                           placeholder="https://example.com" />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="webViewScript">JavaScript to Execute</label>
+                    <textarea class="form-control" id="webViewScript" rows="3" @bind="webViewScript"
+                              placeholder="alert('XSS vulnerability!')"></textarea>
+                </div>
+
+                <div class="btn-group mb-3">
+                    <button class="btn btn-primary" @onclick="LoadWebView">Load in WebView</button>
+                    <button class="btn btn-warning" @onclick="ExecuteJavaScript">Execute JavaScript</button>
+                </div>
+
+                <div class="alert alert-danger">
+                    <strong>Vulnerabilities:</strong>
+                    <ul>
+                        <li>JavaScript enabled with no restrictions</li>
+                        <li>File access enabled</li>
+                        <li>No SSL error validation</li>
+                        <li>Universal file access allowed</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Results</h5>
+            </div>
+            <div class="card-body">
+                <pre class="border p-2 bg-light">@resultMessage</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // File operations
+    private string filePath = "/data/user/0/com.companyname.insecuremauiblazor/files/test.txt";
+    private string fileContent = "This is a test file created by the vulnerable app.";
+
+    // Device info
+    private string deviceInfo = "";
+
+    // Command execution
+    private string command = "device_info";
+
+    // WebView
+    private string webViewUrl = "https://example.com";
+    private string webViewScript = "document.getElementsByTagName('body')[0].style.backgroundColor = 'red';";
+
+    // Results
+    private string resultMessage = "";
+
+    private async Task ReadFile()
+    {
+        try
+        {
+            // VULNERABILITY: No path traversal validation
+            if (string.IsNullOrEmpty(filePath))
+            {
+                resultMessage = "File path cannot be empty.";
+                return;
+            }
+
+            // VULNERABILITY: Log file access
+            Console.WriteLine($"Reading file: {filePath}");
+
+            // VULNERABILITY: Accessing files without proper checks
+            string content = await NativeFeatures.ReadFile(filePath);
+            fileContent = content;
+            resultMessage = $"File read successfully: {filePath}";
+
+            // VULNERABILITY: Store recently accessed files
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "last_file_path", filePath);
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error reading file: {ex.Message}";
+        }
+    }
+
+    private async Task WriteFile()
+    {
+        try
+        {
+            // VULNERABILITY: No path traversal validation
+            if (string.IsNullOrEmpty(filePath))
+            {
+                resultMessage = "File path cannot be empty.";
+                return;
+            }
+
+            // VULNERABILITY: Log file write
+            Console.WriteLine($"Writing to file: {filePath}");
+            Console.WriteLine($"Content: {fileContent}");
+
+            // VULNERABILITY: Writing to files without proper checks
+            string result = await NativeFeatures.WriteFile(filePath, fileContent);
+            resultMessage = result;
+
+            // VULNERABILITY: Store recently written files
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "last_written_file", filePath);
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "last_written_content", fileContent);
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error writing file: {ex.Message}";
+        }
+    }
+
+    private async Task GetDeviceInfo()
+    {
+        try
+        {
+            // VULNERABILITY: Accessing sensitive device information
+            deviceInfo = NativeFeatures.GetDeviceSensitiveInfo();
+            resultMessage = "Device information retrieved successfully.";
+
+            // VULNERABILITY: Log device info
+            Console.WriteLine($"Device info retrieved: {deviceInfo}");
+
+            // VULNERABILITY: Store device info in localStorage
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "device_info", deviceInfo);
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error getting device info: {ex.Message}";
+        }
+    }
+
+    private async Task ExecuteCommand()
+    {
+        try
+        {
+            // VULNERABILITY: No command injection protection
+            if (string.IsNullOrEmpty(command))
+            {
+                resultMessage = "Command cannot be empty.";
+                return;
+            }
+
+            // VULNERABILITY: Log command execution
+            Console.WriteLine($"Executing command: {command}");
+
+            // VULNERABILITY: Execute arbitrary commands
+            string result = await NativeFeatures.ExecuteCommand(command);
+            resultMessage = result;
+
+            // VULNERABILITY: Store command history
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "last_command", command);
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error executing command: {ex.Message}";
+        }
+    }
+
+    private async Task LoadWebView()
+    {
+        try
+        {
+            // VULNERABILITY: No URL validation
+            if (string.IsNullOrEmpty(webViewUrl))
+            {
+                resultMessage = "URL cannot be empty.";
+                return;
+            }
+
+            // VULNERABILITY: Log WebView URL loading
+            Console.WriteLine($"Loading URL in WebView: {webViewUrl}");
+
+            // This is a simulation since we can't actually load a WebView inside a Blazor WebView
+            resultMessage = $"WebView would load: {webViewUrl}\n\n" +
+                           "Vulnerabilities in this operation:\n" +
+                           "1. JavaScript enabled\n" +
+                           "2. File access enabled\n" +
+                           "3. Universal file access allowed\n" +
+                           "4. No SSL certificate validation\n" +
+                           "5. Content access enabled\n" +
+                           "6. Domain access controls disabled";
+
+            // VULNERABILITY: Store WebView history
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "last_webview_url", webViewUrl);
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task ExecuteJavaScript()
+    {
+        try
+        {
+            // VULNERABILITY: No JavaScript validation
+            if (string.IsNullOrEmpty(webViewScript))
+            {
+                resultMessage = "JavaScript cannot be empty.";
+                return;
+            }
+
+            // VULNERABILITY: Log JavaScript execution
+            Console.WriteLine($"Executing JavaScript in WebView: {webViewScript}");
+
+            // This is a simulation since we can't actually execute JavaScript in a WebView from Blazor
+            resultMessage = $"JavaScript would execute in WebView: {webViewScript}\n\n" +
+                           "Vulnerabilities in this operation:\n" +
+                           "1. No JavaScript injection protection\n" +
+                           "2. WebView has access to file system\n" +
+                           "3. WebView can access native app via JavaScript interfaces\n" +
+                           "4. No Content-Security-Policy";
+
+            // VULNERABILITY: Store JavaScript history
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "last_webview_js", webViewScript);
+
+            // Actually execute the JavaScript in the current Blazor WebView (demonstrating the vulnerability)
+            await JSRuntime.InvokeVoidAsync("eval", webViewScript);
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+}

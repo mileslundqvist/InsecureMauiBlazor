@@ -1,0 +1,338 @@
+﻿@page "/code-vulnerabilities"
+@inject IJSRuntime JSRuntime
+@inject IDataStorageService DataStorageService
+
+<PageTitle>Code Quality Vulnerabilities</PageTitle>
+
+<h1>Code Quality Vulnerabilities</h1>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>SQL Injection</h5>
+                <span class="badge bg-danger">VULNERABLE</span>
+            </div>
+            <div class="card-body">
+                <div class="form-group mb-3">
+                    <label for="sqlUsername">Username</label>
+                    <input type="text" class="form-control" id="sqlUsername" @bind="sqlUsername" />
+                    <small class="text-muted">Try: admin' OR '1'='1</small>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="sqlPassword">Password</label>
+                    <input type="password" class="form-control" id="sqlPassword" @bind="sqlPassword" />
+                </div>
+
+                <button class="btn btn-primary" @onclick="ExecuteSqlQuery">Login</button>
+
+                <div class="alert alert-danger mt-3">
+                    <strong>Vulnerability:</strong> SQL Query is built by string concatenation without proper parameterization.
+                    <pre class="mt-2"><code>string query = "SELECT * FROM users WHERE username = '" + username + 
+    "' AND password = '" + password + "'";
+// Execute query directly</code></pre>
+                </div>
+
+                <div class="mt-3">
+                    <label>Generated SQL Query:</label>
+                    <pre class="border p-2 bg-light"><code>@sqlQuery</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Cross-Site Scripting (XSS)</h5>
+                <span class="badge bg-danger">VULNERABLE</span>
+            </div>
+            <div class="card-body">
+                <div class="form-group mb-3">
+                    <label for="xssInput">User Input</label>
+                    <textarea class="form-control" id="xssInput" rows="3" @bind="xssInput"></textarea>
+                    <small class="text-muted">Try: &lt;script&gt;alert('XSS')&lt;/script&gt;</small>
+                </div>
+
+                <button class="btn btn-primary" @onclick="DisplayUserInput">Display Input</button>
+
+                <div class="alert alert-danger mt-3">
+                    <strong>Vulnerability:</strong> User input is rendered directly without sanitization.
+                    <pre class="mt-2"><code>// Vulnerable code
+await JSRuntime.InvokeVoidAsync("eval", 
+    "document.getElementById('output').innerHTML = '" + userInput + "'");</code></pre>
+                </div>
+
+                <div class="mt-3">
+                    <label>Output:</label>
+                    <div id="xssOutput" class="border p-2 bg-light"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Insecure Deserialization</h5>
+                <span class="badge bg-danger">VULNERABLE</span>
+            </div>
+            <div class="card-body">
+                <div class="form-group mb-3">
+                    <label for="serializedData">Serialized Data (JSON)</label>
+                    <textarea class="form-control" id="serializedData" rows="4" @bind="serializedData"></textarea>
+                </div>
+
+                <button class="btn btn-primary" @onclick="DeserializeData">Deserialize</button>
+
+                <div class="alert alert-danger mt-3">
+                    <strong>Vulnerability:</strong> Data is deserialized without type validation or sanitization.
+                    <pre class="mt-2"><code>// Vulnerable code
+var data = JsonSerializer.Deserialize&lt;object&gt;(input);
+// Process data without validation</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Insecure Error Handling</h5>
+                <span class="badge bg-danger">VULNERABLE</span>
+            </div>
+            <div class="card-body">
+                <div class="form-group mb-3">
+                    <label>Error Type</label>
+                    <select class="form-select" @bind="errorType">
+                        <option value="database">Database Error</option>
+                        <option value="authentication">Authentication Error</option>
+                        <option value="file">File System Error</option>
+                        <option value="connection">Connection Error</option>
+                        <option value="null">Null Reference Error</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-primary" @onclick="TriggerError">Trigger Error</button>
+
+                <div class="alert alert-danger mt-3">
+                    <strong>Vulnerability:</strong> Detailed error messages expose sensitive information.
+                    <pre class="mt-2"><code>try {
+    // Operation that might fail
+} catch (Exception ex) {
+    // VULNERABLE: Return full exception details to client
+    return $"Error: {ex.ToString()}";
+}</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Results</h5>
+            </div>
+            <div class="card-body">
+                <pre class="border p-2 bg-light">@resultMessage</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // SQL Injection
+    private string sqlUsername = "";
+    private string sqlPassword = "";
+    private string sqlQuery = "";
+
+    // XSS
+    private string xssInput = "<b>Hello World</b>";
+
+    // Deserialization
+    private string serializedData = "{\n  \"user\": \"admin\",\n  \"role\": \"user\",\n  \"permissions\": [\"read\", \"write\"]\n}";
+
+    // Error handling
+    private string errorType = "database";
+
+    // Results
+    private string resultMessage = "";
+
+    private async Task ExecuteSqlQuery()
+    {
+        try
+        {
+            // VULNERABILITY: SQL injection due to string concatenation
+            sqlQuery = $"SELECT * FROM users WHERE username = '{sqlUsername}' AND password = '{sqlPassword}'";
+
+            // VULNERABILITY: Log query
+            Console.WriteLine($"Executing SQL query: {sqlQuery}");
+
+            // Simulate query execution
+            if (sqlQuery.Contains("'1'='1") ||
+                (sqlUsername == "admin" && sqlPassword == "password123"))
+            {
+                resultMessage = "SQL Injection Successful! Authentication bypassed.\n\n" +
+                               "Query returned 1 row(s):\n" +
+                               "{ id: 1, username: 'admin', role: 'admin', email: 'admin@example.com' }";
+            }
+            else
+            {
+                resultMessage = "Login failed. Invalid username or password.";
+            }
+
+            // VULNERABILITY: Store SQL queries in insecure storage
+            DataStorageService.SaveInsecurely("last_sql_query", sqlQuery);
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task DisplayUserInput()
+    {
+        try
+        {
+            // VULNERABILITY: XSS by directly inserting user input into DOM
+            await JSRuntime.InvokeVoidAsync("eval",
+                $"document.getElementById('xssOutput').innerHTML = '{xssInput.Replace("'", "\\'")}'");
+
+            resultMessage = "User input has been displayed without sanitization.";
+
+            // VULNERABILITY: Store user input in localStorage
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "user_input", xssInput);
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task DeserializeData()
+    {
+        try
+        {
+            // VULNERABILITY: Insecure deserialization without validation
+            resultMessage = "Deserialization simulation:\n\n";
+
+            // Simulate deserialization process
+            resultMessage += "1. Input received for deserialization\n";
+            resultMessage += $"2. Parsing JSON input: {serializedData}\n";
+            resultMessage += "3. Converting to .NET object without type validation\n";
+
+            // Check if JSON is valid
+            try
+            {
+                var options = new System.Text.Json.JsonSerializerOptions
+                    {
+                        AllowTrailingCommas = true,
+                        ReadCommentHandling = System.Text.Json.JsonCommentHandling.Skip
+                    };
+
+                var data = System.Text.Json.JsonSerializer.Deserialize<object>(serializedData, options);
+                resultMessage += "4. Deserialization successful\n";
+                resultMessage += "5. Object created with properties from input without validation\n";
+                resultMessage += "6. VULNERABILITY: No type checking or input validation performed\n";
+            }
+            catch (System.Text.Json.JsonException ex)
+            {
+                resultMessage += $"Error parsing JSON: {ex.Message}\n";
+            }
+
+            // VULNERABILITY: Store serialized data
+            DataStorageService.SaveInsecurely("last_serialized_data", serializedData);
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task TriggerError()
+    {
+        try
+        {
+            // VULNERABILITY: Throwing error to demonstrate insecure error handling
+            string errorDetails = "";
+
+            switch (errorType)
+            {
+                case "database":
+                    errorDetails = "System.Data.SqlClient.SqlException (0x80131904): Cannot open database 'UserDB' requested by the login. The login failed.\n" +
+                                  "Login failed for user 'app_user'.\n" +
+                                  "   at System.Data.SqlClient.SqlInternalConnectionTds..ctor(DbConnectionPoolIdentity identity, SqlConnectionString connectionOptions, SqlCredential credential, Object providerInfo, String newPassword, SecureString newSecurePassword, Boolean redirectedUserInstance, SqlConnectionString userConnectionOptions, SessionData reconnectSessionData, DbConnectionPool pool, String accessToken, Boolean applyTransientFaultHandling, SqlAuthenticationProviderManager sqlAuthProviderManager)\n" +
+                                  "   at System.Data.SqlClient.SqlConnectionFactory.CreateConnection(DbConnectionOptions options, DbConnectionPoolKey poolKey, Object poolGroupProviderInfo, DbConnectionPool pool, DbConnection owningConnection, DbConnectionOptions userOptions)\n" +
+                                  "   at System.Data.ProviderBase.DbConnectionFactory.CreatePooledConnection(DbConnectionPool pool, DbConnection owningObject, DbConnectionOptions options, DbConnectionPoolKey poolKey, DbConnectionOptions userOptions)\n" +
+                                  "   at System.Data.ProviderBase.DbConnectionPool.CreateObject(DbConnection owningObject, DbConnectionOptions userOptions, DbConnectionInternal oldConnection)\n" +
+                                  "   at System.Data.ProviderBase.DbConnectionPool.UserCreateRequest(DbConnection owningObject, DbConnectionOptions userOptions, DbConnectionInternal oldConnection)\n" +
+                                  "   at System.Data.ProviderBase.DbConnectionPool.TryGetConnection(DbConnection owningObject, UInt32 waitForMultipleObjectsTimeout, Boolean allowCreate, Boolean onlyOneCheckConnection, DbConnectionOptions userOptions, DbConnectionInternal& connection)\n" +
+                                  "   at System.Data.ProviderBase.DbConnectionPool.TryGetConnection(DbConnection owningObject, TaskCompletionSource`1 retry, DbConnectionOptions userOptions, DbConnectionInternal& connection)\n" +
+                                  "   at System.Data.ProviderBase.DbConnectionFactory.TryGetConnection(DbConnection owningConnection, TaskCompletionSource`1 retry, DbConnectionOptions userOptions, DbConnectionInternal oldConnection, DbConnectionInternal& connection)\n" +
+                                  "   at System.Data.ProviderBase.DbConnectionInternal.TryOpenConnectionInternal(DbConnection outerConnection, DbConnectionFactory connectionFactory, TaskCompletionSource`1 retry, DbConnectionOptions userOptions)\n" +
+                                  "   at System.Data.ProviderBase.DbConnectionClosed.TryOpenConnection(DbConnection outerConnection, DbConnectionFactory connectionFactory, TaskCompletionSource`1 retry, DbConnectionOptions userOptions)\n" +
+                                  "   at System.Data.SqlClient.SqlConnection.TryOpenInner(TaskCompletionSource`1 retry)\n" +
+                                  "   at System.Data.SqlClient.SqlConnection.TryOpen(TaskCompletionSource`1 retry)\n" +
+                                  "   at System.Data.SqlClient.SqlConnection.Open()\n" +
+                                  "   at VulnerableMAUIApp.Services.DatabaseService.Connect() in C:\\projects\\VulnerableMAUIApp\\Services\\DatabaseService.cs:line 42";
+                    break;
+
+                case "authentication":
+                    errorDetails = "System.Security.Authentication.AuthenticationException: Authentication failed.\n" +
+                                  "   at VulnerableMAUIApp.Services.AuthService.Login(String username, String password) in C:\\projects\\VulnerableMAUIApp\\Services\\AuthService.cs:line 38\n" +
+                                  "Token generation failed for user 'admin' from IP 192.168.1.105\n" +
+                                  "Method: PBKDF2\n" +
+                                  "Salt: a1b2c3d4e5f6g7h8i9j0\n" +
+                                  "Iterations: 1000";
+                    break;
+
+                case "file":
+                    errorDetails = "System.IO.FileNotFoundException: Could not find file 'C:\\Users\\admin\\AppData\\Local\\Temp\\config.json'.\n" +
+                                  "   at System.IO.FileStream.ValidateFileHandle(SafeFileHandle fileHandle)\n" +
+                                  "   at System.IO.FileStream.CreateFileOpenHandle(FileMode mode, FileShare share, FileOptions options)\n" +
+                                  "   at System.IO.FileStream..ctor(String path, FileMode mode, FileAccess access, FileShare share, Int32 bufferSize, FileOptions options)\n" +
+                                  "   at System.IO.StreamReader..ctor(String path, Encoding encoding, Boolean detectEncodingFromByteOrderMarks, Int32 bufferSize, Boolean leaveOpen)\n" +
+                                  "   at System.IO.File.InternalReadAllText(String path, Encoding encoding, Boolean checkHost)\n" +
+                                  "   at VulnerableMAUIApp.Services.ConfigService.LoadConfig() in C:\\projects\\VulnerableMAUIApp\\Services\\ConfigService.cs:line 27";
+                    break;
+
+                case "connection":
+                    errorDetails = "System.Net.Http.HttpRequestException: Connection refused: No connection could be made because the target machine actively refused it. (api.example.com:443)\n" +
+                                  "   at System.Net.Http.ConnectHelper.ConnectAsync(String host, Int32 port, CancellationToken cancellationToken)\n" +
+                                  "   at System.Net.Http.HttpConnectionPool.ConnectAsync(HttpRequestMessage request, Boolean allowHttp2, CancellationToken cancellationToken)\n" +
+                                  "   at System.Net.Http.HttpConnectionPool.CreateHttp11ConnectionAsync(HttpRequestMessage request, CancellationToken cancellationToken)\n" +
+                                  "   at System.Net.Http.HttpConnectionPool.GetHttpConnectionAsync(HttpRequestMessage request, CancellationToken cancellationToken)\n" +
+                                  "   at System.Net.Http.HttpClient.SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)\n" +
+                                  "   at VulnerableMAUIApp.Services.ApiService.FetchData(String endpoint, String apiKey) in C:\\projects\\VulnerableMAUIApp\\Services\\ApiService.cs:line 53\n" +
+                                  "Request details: GET https://api.example.com/v1/users?apiKey=sk_live_1234567890abcdef";
+                    break;
+
+                case "null":
+                    errorDetails = "System.NullReferenceException: Object reference not set to an instance of an object.\n" +
+                                  "   at VulnerableMAUIApp.Services.UserService.GetUserPreferences(String userId) in C:\\projects\\VulnerableMAUIApp\\Services\\UserService.cs:line 78\n" +
+                                  "   at VulnerableMAUIApp.ViewModels.ProfileViewModel.LoadUserData() in C:\\projects\\VulnerableMAUIApp\\ViewModels\\ProfileViewModel.cs:line 42\n" +
+                                  "   at VulnerableMAUIApp.Pages.ProfilePage.OnAppearing() in C:\\projects\\VulnerableMAUIApp\\Pages\\ProfilePage.cs:line 25\n" +
+                                  "User details: { \"id\": \"usr_1234\", \"email\": \"john.doe@example.com\", \"subscription\": \"premium\" }";
+                    break;
+            }
+
+            // VULNERABILITY: Return full error details to UI
+            resultMessage = $"Detailed Error Message (VULNERABLE):\n\n{errorDetails}";
+
+            // VULNERABILITY: Log error details
+            Console.WriteLine($"Error details: {errorDetails}");
+
+            // VULNERABILITY: Store error in localStorage
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "last_error", errorDetails);
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+}

@@ -1,0 +1,178 @@
+﻿@page "/interop-vulnerabilities"
+@inject IJSRuntime JSRuntime
+@inject NativeFeatures NativeFeatures
+@implements IDisposable
+
+<PageTitle>JS-Native Interop Vulnerabilities</PageTitle>
+
+<h1>JavaScript-Native Interop Vulnerabilities</h1>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>JavaScript to .NET Calls</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-group mb-3">
+                    <label for="command">Command to Execute</label>
+                    <input type="text" class="form-control" id="command" @bind="command" 
+                           placeholder="Example: get_files C:\" />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="jsCode">Custom JavaScript Code</label>
+                    <textarea class="form-control" id="jsCode" @bind="jsCode" rows="4"
+                             placeholder="Example: DotNet.invokeMethodAsync('VulnerableMAUIApp', 'ExecuteCommand', 'get_files C:\\')"></textarea>
+                </div>
+
+                <button class="btn btn-primary" @onclick="ExecuteCommand">Execute Command</button>
+                <button class="btn btn-warning" @onclick="ExecuteJavaScript">Execute JavaScript</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>.NET to JavaScript Calls</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-group mb-3">
+                    <label for="jsMethod">JavaScript Method</label>
+                    <input type="text" class="form-control" id="jsMethod" @bind="jsMethod" 
+                           placeholder="Example: storeData" />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="jsArg1">Argument 1</label>
+                    <input type="text" class="form-control" id="jsArg1" @bind="jsArg1" />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="jsArg2">Argument 2</label>
+                    <input type="text" class="form-control" id="jsArg2" @bind="jsArg2" />
+                </div>
+
+                <button class="btn btn-primary" @onclick="CallJavaScript">Call JavaScript Method</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Results</h5>
+            </div>
+            <div class="card-body">
+                <pre>@resultMessage</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string command = "";
+    private string jsCode = "";
+    private string jsMethod = "";
+    private string jsArg1 = "";
+    private string jsArg2 = "";
+    private string resultMessage = "";
+    private DotNetObjectReference<InteropVulnerabilities> objRef;
+
+    protected override void OnInitialized()
+    {
+        // Create a reference to this component for JavaScript to call
+        objRef = DotNetObjectReference.Create(this);
+
+        // Register this object with JavaScript
+        RegisterForJavaScript();
+    }
+
+    private async Task RegisterForJavaScript()
+    {
+        await JSRuntime.InvokeVoidAsync("window.registerDotNetObject", objRef);
+    }
+
+    private async Task ExecuteCommand()
+    {
+        try
+        {
+            // VULNERABILITY: Execute arbitrary commands without validation
+            resultMessage = await NativeFeatures.ExecuteCommand(command);
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task ExecuteJavaScript()
+    {
+        try
+        {
+            // VULNERABILITY: Arbitrary JavaScript execution
+            var result = await JSRuntime.InvokeAsync<string>("eval", jsCode);
+            resultMessage = $"JavaScript executed. Result: {result}";
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task CallJavaScript()
+    {
+        try
+        {
+            // VULNERABILITY: No input validation before calling into JavaScript
+            await JSRuntime.InvokeVoidAsync(jsMethod, jsArg1, jsArg2);
+            resultMessage = $"Called JavaScript method '{jsMethod}' without validation";
+        }
+        catch (Exception ex)
+        {
+            resultMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    // VULNERABILITY: JavaScript-callable method without validation
+    [JSInvokable]
+    public string ExecuteCommandFromJs(string command)
+    {
+        try
+        {
+            // VULNERABILITY: Execute command without validation
+            var result = NativeFeatures.ExecuteCommand(command).Result;
+            Console.WriteLine($"Executed command from JavaScript: {command}");
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return $"Error: {ex.Message}";
+        }
+    }
+
+    // VULNERABILITY: JavaScript-callable method storing sensitive data
+    [JSInvokable]
+    public void StoreCredentialsFromJs(string username, string password, string type)
+    {
+        try
+        {
+            // VULNERABILITY: Store credentials without validation
+            Preferences.Default.Set($"js_{type}_username", username);
+            Preferences.Default.Set($"js_{type}_password", password);
+            Console.WriteLine($"Stored {type} credentials from JavaScript: {username}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error storing credentials: {ex.Message}");
+        }
+    }
+
+    public void Dispose()
+    {
+        objRef?.Dispose();
+    }
+}

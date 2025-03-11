@@ -1,0 +1,384 @@
+﻿@page "/network-vulnerabilities"
+@inject INetworkService NetworkService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Network Vulnerabilities</PageTitle>
+
+<h1>Network Security Vulnerabilities</h1>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Insecure HTTP Requests</h5>
+                <span class="badge bg-danger">VULNERABLE</span>
+            </div>
+            <div class="card-body">
+                <div class="form-group mb-3">
+                    <label for="requestUrl">URL</label>
+                    <input type="text" class="form-control" id="requestUrl" @bind="requestUrl" 
+                          placeholder="http://example.com/api" />
+                    <small class="text-muted">Try both HTTP and HTTPS URLs</small>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Request Method</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" id="methodGet" value="GET" 
+                               checked="@(requestMethod == "GET")" @onclick="@(() => SetRequestMethod("GET"))" />
+                        <label class="form-check-label" for="methodGet">GET</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" id="methodPost" value="POST" 
+                               checked="@(requestMethod == "POST")" @onclick="@(() => SetRequestMethod("POST"))" />
+                        <label class="form-check-label" for="methodPost">POST</label>
+                    </div>
+                </div>
+
+                @if (requestMethod == "POST")
+                {
+                        <div class="form-group mb-3">
+                            <label for="requestData">Request Data (JSON)</label>
+                            <textarea class="form-control" id="requestData" rows="3" @bind="requestData" 
+                                      placeholder='{"key": "value"}'></textarea>
+                        </div>
+                }
+
+                <button class="btn btn-primary" @onclick="SendRequest">Send Request</button>
+
+                <div class="alert alert-danger mt-3">
+                    <strong>Vulnerabilities:</strong>
+                    <ul>
+                        <li>Allows HTTP (non-encrypted) connections</li>
+                        <li>No SSL certificate validation</li>
+                        <li>No input validation for URLs</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Credential Transmission</h5>
+                <span class="badge bg-danger">VULNERABLE</span>
+            </div>
+            <div class="card-body">
+                <div class="form-group mb-3">
+                    <label for="apiEndpoint">API Endpoint</label>
+                    <input type="text" class="form-control" id="apiEndpoint" @bind="apiEndpoint" 
+                           placeholder="http://example.com/api/login" />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="apiUsername">Username</label>
+                    <input type="text" class="form-control" id="apiUsername" @bind="apiUsername" />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="apiPassword">Password</label>
+                    <input type="password" class="form-control" id="apiPassword" @bind="apiPassword" />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label>Transmission Method</label>
+                    <select class="form-select" @bind="credentialMethod">
+                        <option value="plaintext">Plain Text</option>
+                        <option value="basic">Basic Auth</option>
+                        <option value="header">Custom Headers</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-primary" @onclick="SendCredentials">Send Credentials</button>
+
+                <div class="alert alert-danger mt-3">
+                    <strong>Vulnerabilities:</strong>
+                    <ul>
+                        <li>Credentials sent in plain text</li>
+                        <li>No HTTPS enforcement</li>
+                        <li>Credentials logged</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>API Key Handling</h5>
+                <span class="badge bg-danger">VULNERABLE</span>
+            </div>
+            <div class="card-body">
+                <div class="form-group mb-3">
+                    <label for="apiKey">API Key</label>
+                    <input type="text" class="form-control" id="apiKey" @bind="apiKey" 
+                           placeholder="sk_test_1234567890abcdefghijklmn" />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="apiKeyEndpoint">API Endpoint</label>
+                    <input type="text" class="form-control" id="apiKeyEndpoint" @bind="apiKeyEndpoint" 
+                           placeholder="http://example.com/api/data" />
+                </div>
+
+                <button class="btn btn-primary" @onclick="UseApiKey">Make API Request</button>
+
+                <div class="alert alert-danger mt-3">
+                    <strong>Vulnerabilities:</strong>
+                    <ul>
+                        <li>API key sent in URL query string</li>
+                        <li>API key stored in plain text</li>
+                        <li>API key visible in browser history</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>CORS Vulnerability</h5>
+                <span class="badge bg-danger">VULNERABLE</span>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <strong>Vulnerability:</strong> This app simulates weak CORS (Cross-Origin Resource Sharing) 
+                    configuration that allows any site to make requests to your API.
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="corsOrigin">Origin</label>
+                    <input type="text" class="form-control" id="corsOrigin" @bind="corsOrigin" 
+                           placeholder="https://evil-site.com" />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="corsEndpoint">API Endpoint</label>
+                    <input type="text" class="form-control" id="corsEndpoint" @bind="corsEndpoint" 
+                           placeholder="http://your-api.com/sensitive-data" />
+                </div>
+
+                <button class="btn btn-primary" @onclick="TestCORS">Test CORS</button>
+
+                <pre class="mt-3 border p-2 bg-light">
+// Example vulnerable CORS configuration on server
+app.UseCors(builder => builder
+    .AllowAnyOrigin()     // VULNERABLE
+    .AllowAnyMethod()     // VULNERABLE
+    .AllowAnyHeader());   // VULNERABLE
+                </pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Response</h5>
+            </div>
+            <div class="card-body">
+                <pre class="border p-2 bg-light">@responseData</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // HTTP request
+    private string requestUrl = "http://httpbin.org/anything";
+    private string requestMethod = "GET";
+    private string requestData = "{\n  \"data\": \"test\",\n  \"sensitive\": true\n}";
+
+    // Credential transmission
+    private string apiEndpoint = "http://httpbin.org/post";
+    private string apiUsername = "admin";
+    private string apiPassword = "password123";
+    private string credentialMethod = "plaintext";
+
+    // API key
+    private string apiKey = "sk_test_1234567890abcdefghijklmn";
+    private string apiKeyEndpoint = "http://httpbin.org/get";
+
+    // CORS
+    private string corsOrigin = "https://evil-site.com";
+    private string corsEndpoint = "http://httpbin.org/cors";
+
+    // Response
+    private string responseData = "";
+
+    // Method to set request method and avoid syntax issues
+    private void SetRequestMethod(string method)
+    {
+        requestMethod = method;
+    }
+
+    private async Task SendRequest()
+    {
+        try
+        {
+            // VULNERABILITY: No URL validation
+            if (string.IsNullOrEmpty(requestUrl))
+            {
+                responseData = "URL cannot be empty.";
+                return;
+            }
+
+            // VULNERABILITY: Log request details
+            Console.WriteLine($"Making {requestMethod} request to {requestUrl}");
+            if (requestMethod == "POST" && !string.IsNullOrEmpty(requestData))
+            {
+                Console.WriteLine($"Request data: {requestData}");
+            }
+
+            // VULNERABILITY: Make HTTP request without proper validation
+            string result;
+            if (requestMethod == "GET")
+            {
+                result = await NetworkService.FetchDataAsync(requestUrl);
+            }
+            else
+            {
+                result = await NetworkService.SendDataAsync(requestUrl, requestData);
+            }
+
+            responseData = result;
+
+            // VULNERABILITY: Log response
+            Console.WriteLine($"Response: {result.Substring(0, Math.Min(result.Length, 200))}");
+
+            // VULNERABILITY: Save URL to localStorage
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "last_api_url", requestUrl);
+        }
+        catch (Exception ex)
+        {
+            responseData = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task SendCredentials()
+    {
+        try
+        {
+            // VULNERABILITY: No URL validation
+            if (string.IsNullOrEmpty(apiEndpoint))
+            {
+                responseData = "API endpoint cannot be empty.";
+                return;
+            }
+
+            // VULNERABILITY: No encryption for credentials
+            string requestBody = "";
+            string result = "";
+
+            switch (credentialMethod)
+            {
+                case "plaintext":
+                    // VULNERABILITY: Credentials in plain text
+                    requestBody = $"{{\"username\":\"{apiUsername}\",\"password\":\"{apiPassword}\"}}";
+                    result = await NetworkService.SendDataAsync(apiEndpoint, requestBody);
+                    break;
+
+                case "basic":
+                    // VULNERABILITY: Basic auth over possibly non-HTTPS
+                    string credentials = Convert.ToBase64String(
+                        System.Text.Encoding.UTF8.GetBytes($"{apiUsername}:{apiPassword}"));
+
+                    // This is a simple simulation of Basic Auth since our NetworkService doesn't support it directly
+                    requestBody = $"{{\"Authorization\":\"Basic {credentials}\"}}";
+                    result = await NetworkService.SendDataAsync(apiEndpoint, requestBody);
+                    break;
+
+                case "header":
+                    // VULNERABILITY: Credentials in custom headers
+                    requestBody = $"{{\"X-Username\":\"{apiUsername}\",\"X-Password\":\"{apiPassword}\"}}";
+                    result = await NetworkService.SendDataAsync(apiEndpoint, requestBody);
+                    break;
+            }
+
+            responseData = result;
+
+            // VULNERABILITY: Log credential transmission
+            Console.WriteLine($"Sent credentials to {apiEndpoint} using {credentialMethod} method");
+
+            // VULNERABILITY: Save credentials to localStorage
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "last_username", apiUsername);
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "credential_method", credentialMethod);
+        }
+        catch (Exception ex)
+        {
+            responseData = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task UseApiKey()
+    {
+        try
+        {
+            // VULNERABILITY: No URL validation
+            if (string.IsNullOrEmpty(apiKeyEndpoint))
+            {
+                responseData = "API endpoint cannot be empty.";
+                return;
+            }
+
+            // VULNERABILITY: API key in URL query string
+            string url = apiKeyEndpoint;
+            if (!url.Contains("?"))
+            {
+                url += "?";
+            }
+            else if (!url.EndsWith("&") && !url.EndsWith("?"))
+            {
+                url += "&";
+            }
+
+            url += $"api_key={apiKey}";
+
+            // VULNERABILITY: Log URL with API key
+            Console.WriteLine($"Making request to {url}");
+
+            string result = await NetworkService.FetchDataAsync(url);
+            responseData = result;
+
+            // VULNERABILITY: Save API key to localStorage
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "last_api_key", apiKey);
+        }
+        catch (Exception ex)
+        {
+            responseData = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task TestCORS()
+    {
+        try
+        {
+            // This is a simulation of a CORS request
+            responseData = $"CORS Test Simulation:\n\n" +
+                          $"Origin: {corsOrigin}\n" +
+                          $"Endpoint: {corsEndpoint}\n\n" +
+                          $"Request Headers:\n" +
+                          $"Origin: {corsOrigin}\n" +
+                          $"Access-Control-Request-Method: GET\n\n" +
+                          $"Response Headers (vulnerable configuration):\n" +
+                          $"Access-Control-Allow-Origin: *\n" +
+                          $"Access-Control-Allow-Methods: *\n" +
+                          $"Access-Control-Allow-Headers: *\n\n" +
+                          $"Result: Cross-origin request allowed from any origin, including {corsOrigin}";
+
+            // VULNERABILITY: Log CORS test
+            Console.WriteLine($"CORS test from {corsOrigin} to {corsEndpoint}");
+        }
+        catch (Exception ex)
+        {
+            responseData = $"Error: {ex.Message}";
+        }
+    }
+}
