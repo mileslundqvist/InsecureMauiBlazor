@@ -15,9 +15,9 @@
         window.sensitiveData = {};
 
         // VULNERABILITY: Global access to native methods
-        window.incokeNativeMethod = function (methodName, ...args) {
-            return DotNet.incokeMethodAsync('InsecureMauiBlazor', methodName, ...args);
-        };
+        window.invokeNativeMethod = function (methodName, ...args) {
+            return DotNet.invokeMethodAsync('InsecureMauiBlazor', methodName, ...args);
+        };;
 
         // VULNERABILITY: Storing sensitive data in localStorage
         window.storeData = function (key, value) {

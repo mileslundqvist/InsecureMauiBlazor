@@ -17,16 +17,16 @@
                 <div class="form-group mb-3">
                     <label for="command">Command to Execute</label>
                     <input type="text" class="form-control" id="command" @bind="command" 
-                           placeholder="Example: get_files C:\" />
+                    placeholder="Example: get_files C:\" />
                 </div>
 
                 <div class="form-group mb-3">
                     <label for="jsCode">Custom JavaScript Code</label>
                     <textarea class="form-control" id="jsCode" @bind="jsCode" rows="4"
-                             placeholder="Example: DotNet.invokeMethodAsync('VulnerableMAUIApp', 'ExecuteCommand', 'get_files C:\\')"></textarea>
+                    placeholder="Example: window.alert('Hello from JavaScript');"></textarea>
                 </div>
 
-                <button class="btn btn-primary" @onclick="ExecuteCommand">Execute Command</button>
+                <button class="btn btn-primary mb-2" @onclick="ExecuteCommand">Execute Command</button>
                 <button class="btn btn-warning" @onclick="ExecuteJavaScript">Execute JavaScript</button>
             </div>
         </div>
@@ -41,7 +41,7 @@
                 <div class="form-group mb-3">
                     <label for="jsMethod">JavaScript Method</label>
                     <input type="text" class="form-control" id="jsMethod" @bind="jsMethod" 
-                           placeholder="Example: storeData" />
+                    placeholder="Example: storeData" />
                 </div>
 
                 <div class="form-group mb-3">
@@ -114,7 +114,8 @@
         try
         {
             // VULNERABILITY: Arbitrary JavaScript execution
-            var result = await JSRuntime.InvokeAsync<string>("eval", jsCode);
+            var jsCodeToExecute = jsCode;
+            var result = await JSRuntime.InvokeAsync<string>("eval", jsCodeToExecute);
             resultMessage = $"JavaScript executed. Result: {result}";
         }
         catch (Exception ex)
