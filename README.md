@@ -102,12 +102,12 @@ This application is designed to be scanned by SAST tools.
     * `IAuthService.cs`, `InsecureAuthService.cs`
     * `ICryptoService.cs`, `InsecureCryptoService.cs`
     * `IDataStorageService.cs`, `InsecureDataStorageService.cs`
-    * `INetworkService.cs`, `InsecureNetworkService.cs`
-    * `NativeFeatures.cs`: (If you have this service for platform-specific native calls)
+    * `INetworkService.cs`, `InsecureNetworkService.cs` 
 * `/wwwroot/`: Static web assets including `index.html` for the Blazor Hybrid setup.
     * May contain custom JS for interop demos.
 * `/Platforms/`: Platform-specific startup code (Android, iOS, etc.).
     * WebView configurations might be found here.
+* `NativeFeatures.cs`: Dummy class for mocked native commands
 
 ---
 
